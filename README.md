@@ -7,7 +7,10 @@
 > 做角色一致的片子，先读 [`docs/CHARACTER-CONSISTENCY.md`](docs/CHARACTER-CONSISTENCY.md)
 > ——那是踩了一整轮坑后总结的 SOP（ref2va 锁人 + 强制场景描写 + 大动作规则）。
 >
-> **第一次装、或者要发给朋友装 → 看 [`docs/INSTALL.md`](docs/INSTALL.md)**（一步一步的说明书，含常见问题）。
+> **第一次装、或者要发给朋友装 → 看 [`说明书.md`](说明书.md)**（一步一步的说明书，含模型清单与常见问题）。
+>
+> **想让 AI 帮你装 → 把仓库链接丢给 Claude / Cursor / OpenClaw 时，它会自动读到 [`AGENTS.md`](AGENTS.md)**；
+> 装完可以跑 `python studio/tools/doctor.py` 自检，全部 `[OK]` 就能启动。
 
 ---
 
