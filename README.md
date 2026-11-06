@@ -6,6 +6,8 @@
 
 > 做角色一致的片子，先读 [`docs/CHARACTER-CONSISTENCY.md`](docs/CHARACTER-CONSISTENCY.md)
 > ——那是踩了一整轮坑后总结的 SOP（ref2va 锁人 + 强制场景描写 + 大动作规则）。
+>
+> **第一次装、或者要发给朋友装 → 看 [`docs/INSTALL.md`](docs/INSTALL.md)**（一步一步的说明书，含常见问题）。
 
 ---
 
