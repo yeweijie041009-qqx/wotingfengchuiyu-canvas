@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 短剧画布 · 本地 H3</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot" id="comfyDot"></span>
+      <b>AI 短剧画布</b>
+      <span class="muted" id="comfyState">检测中…</span>
+    </div>
+    <div class="tools">
+      <button class="btn primary" id="btnAddMenu">＋ 节点</button>
+      <button class="btn" data-add="director">+ 导演</button>
+      <button class="btn" data-add="script">+ 脚本</button>
+      <button class="btn" data-add="video">+ 视频</button>
+      <button class="btn" data-add="image">+ 图片</button>
+      <button class="btn" id="btnI2V">图生视频</button>
+      <button class="btn" data-add="text">+ 文本</button>
+      <button class="btn ghost" id="btnFit">适应画布</button>
+      <button class="btn ghost" id="btnSave">保存</button>
+      <button class="btn ghost" id="btnUi" title="切换界面字号">Aa</button>
+      <button class="btn ghost" id="btnKey" title="填入 API Key（可选，不填也能用）">🔑</button>
+    </div>
+    <div class="zoom">
+      <button class="btn ghost" id="btnOut">−</button>
+      <span id="zoomLabel">100%</span>
+      <button class="btn ghost" id="btnIn">+</button>
+    </div>
+  </header>
+
+  <main id="viewport">
+    <div id="canvas">
+      <svg id="edges"></svg>
+      <div id="nodes"></div>
+    </div>
+    <div id="hint">拖动空白 = 平移 · 滚轮 = 缩放 · 双击或右键空白 = 新建节点</div>
+
+    <div id="agentbar">
+      <span class="spark">✦</span>
+      <input id="agIdea" placeholder="一句话，剩下的交给我：雨夜，外卖员敲开一扇门，开门的是十年后的自己">
+      <select id="agShots" title="镜头数">
+        <option>2</option><option>3</option><option selected>5</option>
+        <option>6</option><option>8</option>
+      </select>
+      <select id="agPreset" title="质量档">
+        <option value="draft">草稿 360P/4步</option>
+        <option value="standard" selected>标准 480P/8步</option>
+        <option value="fine">精细 720P/8步</option>
+      </select>
+      <select id="agFormat" title="编剧格式">
+        <option value="ultrashort" selected>超短片</option>
+        <option value="short">短片</option>
+      </select>
+      <label id="agSkillWrap" title="启用「山音超级编剧大师」skill">
+        <input type="checkbox" id="agSkill"> 编剧skill
+      </label>
+      <button class="btn primary" id="agGo">一句话成片</button>
+    </div>
+
+    <div id="agPanel" class="hidden">
+      <div class="ag-head">
+        <b id="agTitle">导演中…</b>
+        <span class="muted" id="agStage"></span>
+        <button class="btn ghost" id="agClose">✕</button>
+      </div>
+      <div id="agList"></div>
+      <video id="agFinal" class="hidden" controls></video>
+    </div>
+  </main>
+
+  <aside id="inspector" class="hidden">
+    <div class="insp-head">
+      <b id="inspTitle">节点</b>
+      <button class="btn ghost" id="inspClose">✕</button>
+    </div>
+    <div id="inspBody"></div>
+  </aside>
+
+  <div id="keyPanel" class="hidden">
+    <div class="ag-head"><b>LLM 设置（可选）</b><button class="btn ghost" id="keyClose">✕</button></div>
+    <div class="muted" style="margin-bottom:8px">不填也能用：直接生成提示词 / 模板分镜。填了才让导演 skill 真正写剧本。</div>
+    <label class="lbl">API Key</label>
+    <input id="keyInput" type="password" placeholder="sk-...">
+    <label class="lbl">服务商（自动填地址和模型）</label>
+    <select id="keyPreset">
+      <option value="">自定义</option>
+      <option value="https://api.deepseek.com|deepseek-chat">DeepSeek</option>
+      <option value="https://api.openai.com/v1|gpt-4o-mini">OpenAI</option>
+      <option value="https://api.moonshot.cn/v1|moonshot-v1-8k">Kimi 月之暗面</option>
+      <option value="https://open.bigmodel.cn/api/paas/v4|glm-4-flash">智谱 GLM</option>
+      <option value="https://dashscope.aliyuncs.com/compatible-mode/v1|qwen-plus">通义千问</option>
+      <option value="https://api.siliconflow.cn/v1|deepseek-ai/DeepSeek-V3">硅基流动</option>
+      <option value="https://openrouter.ai/api/v1|openai/gpt-4o-mini">OpenRouter</option>
+      <option value="http://127.0.0.1:11434/v1|qwen2.5:14b">本地 Ollama</option>
+    </select>
+    <label class="lbl">Base URL</label>
+    <input id="keyBase" placeholder="https://api.deepseek.com">
+    <label class="lbl">模型</label>
+    <input id="keyModel" placeholder="deepseek-chat">
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="keySave">保存</button>
+      <button class="btn" id="keyTest">测试连接</button>
+      <button class="btn" id="keyClear">清除</button>
+    </div>
+    <div class="status" id="keyStatus"></div>
+  </div>
+
+  <div id="nodeMenu" class="hidden">
+    <div class="menu-item" data-node-act="delete">删除节点</div>
+    <div class="menu-item" data-node-act="duplicate">复制节点</div>
+  </div>
+
+  <div id="menu" class="hidden">
+    <div class="menu-item" data-type="director">导演节点（剧本）</div>
+    <div class="menu-item" data-type="script">脚本节点</div>
+    <div class="menu-item" data-type="video">视频节点（H3）</div>
+    <div class="menu-item" data-type="text">文本节点</div>
+    <div class="menu-item" data-type="image">图片节点（SDXL）</div>
+  </div>
+
+<script src="/app.js"></script>
+</body>
+</html>

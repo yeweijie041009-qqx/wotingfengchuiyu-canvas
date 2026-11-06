@@ -1,0 +1,36 @@
+﻿# 数据与密钥
+config.json
+data/
+*.log
+
+# 生成物
+output/
+input/
+temp/
+*.mp4
+*.png
+*.jpg
+*.safetensors
+*.gguf
+
+# Python
+__pycache__/
+*.pyc
+.pylibs/
+*.egg-info/
+
+# 依赖与缓存
+comfy_ui/
+ComfyUI/
+models/
+custom_nodes/*
+!custom_nodes/.gitkeep
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+extra_model_paths.yaml
+projects/*.json

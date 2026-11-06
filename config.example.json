@@ -1,0 +1,15 @@
+{
+  "_说明": "复制成 config.json 后按需修改；留空则用默认值（数据目录默认在仓库旁的 data/）",
+
+  "data_dir": "D:/AI-Studio",
+  "comfy_root": "E:/Comfy-Desktop/ComfyUI-Installs/ComfyUI/ComfyUI",
+  "comfy_python": "",
+  "comfy_url": "http://127.0.0.1:8188",
+  "port": 8770,
+
+  "_llm说明": "api_key 留空也能用（模板分镜 + H3 提示词规范）；填了才真正调用编剧 skill",
+
+  "api_key": "",
+  "base_url": "https://api.deepseek.com",
+  "model": "deepseek-chat"
+}
