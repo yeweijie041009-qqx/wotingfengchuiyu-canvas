@@ -151,37 +151,50 @@
       const img = nodes.images[i];
       img.data.status = '出图中…';
       render();
+      // 第 2 镜起，用第 1 镜当角色参考，尽量锁住同一个人
+      const first = nodes.images[0];
+      const ref = (i > 0 && first && first.data.file) ? first.data.file.filename : undefined;
       const r = await fetch('/api/image/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: img.data.prompt, engine: 'sdxl', aspect: img.data.aspect,
           seed: Math.floor(Math.random() * 1e6), llm: getLLM(),
+          ref, ip_weight: ref ? 0.6 : undefined,
         }),
       });
       const j0 = await r.json();
       if (!r.ok) throw new Error(j0.error || '出图失败');
       const done = await job(j0.id);
       img.data.file = (done.files && done.files[0]) || null;
-      img.data.status = '完成';
+      img.data.status = ref ? '完成（角色参考）' : '完成';
       img.data.statusClass = 'ok';
       render();
-      addMsg(`镜头 ${i + 1} 出图完成`, 'ok');
+      addMsg(`镜头 ${i + 1} 出图完成` + (ref ? '（参考第 1 镜锁人）' : ''), 'ok');
     }
   }
 
   async function runVideos() {
+    // 统一用第 1 镜的图当「角色参考」走 ref2va，比每镜各自首帧更稳
+    const first = nodes.images[0];
+    const charRef = (first && first.data.file) ? first.data.file.filename : null;
+    const subject = (plan && plan.shots && plan.shots[0]) ? plan.shots[0].action : '';
+    if (charRef) addMsg('视频统一用第 1 镜的人物当参考（锁角色），动作服从度会低一些但人物一致', 'ok');
+
     for (let i = 0; i < nodes.videos.length; i++) {
       if (stopFlag) return;
       const vid = nodes.videos[i];
       const img = nodes.images[i];
       vid.data.status = '生成中…';
       render();
+      const useRef = !!charRef;
       const r = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: vid.data.prompt, seconds: vid.data.seconds, preset: 'draft',
           aspect: vid.data.aspect, seed: Math.floor(Math.random() * 1e6),
-          image: img && img.data.file ? img.data.file.filename : undefined,
+          image: useRef ? charRef : (img && img.data.file ? img.data.file.filename : undefined),
+          ref_mode: useRef,
+          subject: useRef ? subject : undefined,
           llm: getLLM(),
         }),
       });
