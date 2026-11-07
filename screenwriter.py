@@ -1,4 +1,4 @@
-"""编剧：用「山音超级编剧大师」skill 产出分镜脚本，可直接喂给视频管线。
+﻿"""编剧：用「山音超级编剧大师」skill 产出分镜脚本，可直接喂给视频管线。
 
 两种模式：
   · 配了 config.json 的 api_key → 真调 LLM，拿回结构化分镜
@@ -57,8 +57,8 @@ def system_prompt(fmt: str) -> str:
     return skills_loader.compose(SKILL, refs)
 
 
-def _llm(messages, cfg):
-    return llm.complete(cfg, messages, json_mode=True)["data"]
+def _llm(messages, cfg, timeout: int = 180):
+    return llm.complete(cfg, messages, json_mode=True, timeout=timeout)["data"]
 
 
 CAMERAS = ["固定机位", "缓慢推近", "跟随主体", "缓慢环绕"]
@@ -103,7 +103,7 @@ def _fallback(idea: str, n_shots: int, seconds: float, style: str) -> dict:
 
 def plan(idea: str, fmt: str = "ultrashort", n_shots: int = 6,
          seconds: float = 5.0, style: str = "电影感写实风格",
-         llm: dict | None = None) -> dict:
+         llm: dict | None = None, timeout: int = 180) -> dict:
     """llm: 前端临时传入的 {api_key, base_url, model}；不传则读 config.json。"""
     fmt = fmt if fmt in FORMATS else "ultrashort"
     sys_prompt = system_prompt(fmt)
@@ -122,7 +122,7 @@ def plan(idea: str, fmt: str = "ultrashort", n_shots: int = 6,
 
     try:
         out = _llm([{"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user}], cfg)
+                    {"role": "user", "content": user}], cfg, timeout)
         shots = []
         for i, s in enumerate(out.get("shots", [])[:n_shots]):
             shots.append(_normalize(s, i, seconds, style))

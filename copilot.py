@@ -1,4 +1,4 @@
-"""画布副驾驶：一段剧本 / 一句话 → 结构化镜头表 → 前端据此铺节点。
+﻿"""画布副驾驶：一段剧本 / 一句话 → 结构化镜头表 → 前端据此铺节点。
 
 这里**不自己写分镜**，而是复用两套 skill：
   · 山音超级编剧大师（screenwriter）—— 写分镜、台词、景别
@@ -43,7 +43,7 @@ def plan(text: str, n_shots: int = 4, style: str = "电影感写实风格",
     """走 screenwriter（山音 skill）拿分镜，h3_prompt 负责视频提示词。"""
     note = ""
     try:
-        sp = screenwriter.plan(text, fmt, n_shots, seconds, style, llm=llm)
+        sp = screenwriter.plan(text, fmt, n_shots, seconds, style, llm=llm, timeout=110)
         sb = sp["storyboard"]
         shots = []
         for s in sb["shots"]:

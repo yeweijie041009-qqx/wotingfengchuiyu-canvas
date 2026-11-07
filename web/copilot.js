@@ -1,4 +1,4 @@
-/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
+﻿/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
 (() => {
   const api = window.STUDIO;
   if (!api) return;
@@ -158,9 +158,14 @@
 
     try {
       const isRefine = !!plan;
-      addMsg('正在拆解剧本…（最多等 90 秒，超时会退回模板分镜）');
+      const tickMsg = addMsg('正在拆解剧本…0s（最多等 150 秒）');
+      let elapsed = 0;
+      const tickTimer = setInterval(() => {
+        elapsed += 3;
+        tickMsg.textContent = '正在拆解剧本…' + elapsed + 's（最多等 150 秒）';
+      }, 3000);
       const ctl = new AbortController();
-      const to = setTimeout(() => ctl.abort(), 90000);
+      const to = setTimeout(() => ctl.abort(), 150000);
       let j;
       try {
         const r = await fetch(isRefine ? '/api/copilot/refine' : '/api/copilot/plan', {
@@ -178,10 +183,11 @@
         j = await r.json();
         if (!r.ok) throw new Error(j.error || '拆分失败');
       } catch (e) {
-        if (e && e.name === 'AbortError') throw new Error('等待超时（90 秒），请检查 API Key 或换个模型再试');
+        if (e && e.name === 'AbortError') throw new Error('等待超时（150 秒）。Kimi k3 系列比较慢，可换 kimi-k2.5 / kimi-latest，或稍后再试');
         throw e;
       } finally {
         clearTimeout(to);
+        clearInterval(tickTimer);
       }
       j.style = '';
       build(j);
