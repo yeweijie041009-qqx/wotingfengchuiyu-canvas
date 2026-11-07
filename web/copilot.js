@@ -1,4 +1,4 @@
-﻿/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
+/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
 (() => {
   const api = window.STUDIO;
   if (!api) return;
@@ -16,6 +16,7 @@
       </label>
       <span id="cpSplit" class="cp-split">≈ 2 镜 × 5 秒</span>
       <label><input id="cpAuto" type="checkbox" checked> 自动出图</label>
+      <label title="默认关：先出图让你确认人物一致性，满意了再出视频"><input id="cpAutoVid" type="checkbox"> 出完图直接出视频</label>
     </div>
     <div class="cp-input">
       <textarea id="cpText" rows="3" placeholder="写一句话，或粘贴一段剧本。回车发送，Shift+回车换行"></textarea>
@@ -244,9 +245,16 @@
 
       if (document.getElementById('cpAuto').checked) {
         await runImages();
-        addMsg('出图完成，开始逐镜出视频…', 'ok');
-        await runVideos();
-        addMsg('全部完成，可以在画布上拼接或下载。', 'ok');
+        if (document.getElementById('cpAutoVid').checked) {
+          addMsg('出图完成，按设置直接出视频…', 'ok');
+          await runVideos();
+          addMsg('全部完成，可以在画布上拼接或下载。', 'ok');
+        } else {
+          addMsg('图片出完了 —— 先检查人物是否一致。\n' +
+            '满意就点「继续出视频」；不满意可以改某个图片节点的提示词后点「重出图」，' +
+            '或用第一张图做角色参考再出。', 'ok');
+          addActions();
+        }
       }
     } catch (e) {
       addMsg('出错：' + (e.message || e), 'err');
@@ -254,8 +262,53 @@
       running = false;
       document.getElementById('cpSend').disabled = false;
       document.getElementById('cpStop').style.display = 'none';
+      refreshActions();
     }
   }
+
+  /* ---------- 出图之后的「确认 / 继续」按钮 ---------- */
+  function addActions() {
+    const box = document.createElement('div');
+    box.className = 'cp-msg cp-actions-box';
+    box.innerHTML = `
+      <button class="btn primary" data-a="go">继续出视频</button>
+      <button class="btn" data-a="redo">重出图</button>
+      <button class="btn" data-a="lock">用第 1 镜当角色参考</button>`;
+    box.querySelector('[data-a="go"]').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        addMsg('开始逐镜出视频…');
+        await runVideos();
+        addMsg('视频全部完成。', 'ok');
+      } catch (err) {
+        addMsg('出视频出错：' + (err.message || err), 'err');
+      } finally {
+        box.remove();
+      }
+    };
+    box.querySelector('[data-a="redo"]').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        await runImages();
+        addMsg('重出图完成。', 'ok');
+      } catch (err) {
+        addMsg('重出图失败：' + (err.message || err), 'err');
+      } finally {
+        e.target.disabled = false;
+      }
+    };
+    box.querySelector('[data-a="lock"]').onclick = () => {
+      const first = nodes.images[0];
+      if (!first || !first.data.file) { addMsg('还没有图可以当参考', 'err'); return; }
+      api.setSubject && api.setSubject(first.data.file.filename);
+      addMsg(`已把「${first.data.file.filename}」设为角色参考图；` +
+        '之后重新出图会锁住这个人物。', 'ok');
+    };
+    chat.appendChild(box);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function refreshActions() { /* 预留：手动按钮的状态同步 */ }
 
   function mount() {
     panel = document.createElement('aside');

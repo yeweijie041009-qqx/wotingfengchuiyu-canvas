@@ -435,3 +435,7 @@ body.cp-open #agentbar {
 
 .cp-split { color: var(--muted); font-size: .92em; }
 
+
+.cp-actions-box { display: flex; flex-wrap: wrap; gap: 8px; background: transparent; border: 0; padding: 0; }
+.cp-actions-box .btn { font-size: .92em; padding: 9px 14px; }
+

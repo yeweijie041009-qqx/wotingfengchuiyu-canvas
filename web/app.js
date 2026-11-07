@@ -1,4 +1,4 @@
-/* AI 短剧画布 · 前端（零依赖） */
+﻿/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
               conn: null, drag: null, pan: null };
@@ -1322,7 +1322,13 @@
   loadProfiles();
   S.subject = JSON.parse(localStorage.getItem('studio.subject') || 'null');
   renderSubjectChip();
-  window.STUDIO = { S, newNode, render, getLLM, aspect: () => '16:9' };
+  window.STUDIO = {
+    S, newNode, render, getLLM,
+    setSubject: (filename) => {
+      S.subject = { filename };
+      try { localStorage.setItem('studio.subject', JSON.stringify(S.subject)); } catch (e) {}
+    },
+  };
   window.__BOOTED = true;
   setInterval(health, 5000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) health(); });
