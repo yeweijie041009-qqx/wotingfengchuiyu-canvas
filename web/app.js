@@ -1,4 +1,4 @@
-﻿/* AI 短剧画布 · 前端（零依赖） */
+/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
               conn: null, drag: null, pan: null };
@@ -91,7 +91,6 @@
   /* ---------------- render ---------------- */
   const TYPE_NAME = { director: '导演 · 剧本', script: '脚本', video: '视频 · H3', text: '文本', image: '图片', audio: '音频' };
   const IMG_MODES = { single: '单图', turnaround: '角色三视图', grid4: '四宫格', grid9: '九宫格' };
-  let PROFILES = [];
 
   function nodeHTML(n) {
     let body = '';
@@ -220,7 +219,7 @@
             `<option value="${k}" ${k === (n.data.mode || 'single') ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <select data-f="profile">
             <option value="">默认（SDXL）</option>
-            ${PROFILES.filter((p) => p.kind === 'image').map((p) => <option value="${p.id}" ${p.id === n.data.profile ? 'selected' : ''}>${esc(p.name)}${p.ready ? '' : '（缺模型）'}</option>).join('')}
+            ${PROFILES.filter((p) => p.kind === 'image').map((p) => `<option value="${p.id}" ${p.id === n.data.profile ? 'selected' : ''}>${esc(p.name)}${p.ready ? '' : '（缺模型）'}</option>`).join('')}
           </select>
           <select data-f="engine">
             <option value="sdxl" ${(n.data.engine || 'sdxl') === 'sdxl' ? 'selected' : ''}>SDXL</option>
