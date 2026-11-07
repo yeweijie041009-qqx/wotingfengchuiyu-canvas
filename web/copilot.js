@@ -185,7 +185,7 @@
       }
       j.style = '';
       build(j);
-      addMsg(`已拆成 ${j.shots.length} 个镜头，画布上铺好了图节点和视频节点` +
+      addMsg(`已用【${j.skill || '模板'}】拆成 ${j.shots.length} 个镜头，画布上铺好了图节点和视频节点` +
         (j.note ? `（${j.note}）` : ''), 'ok');
 
       if (document.getElementById('cpAuto').checked) {
