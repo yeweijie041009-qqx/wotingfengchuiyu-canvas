@@ -1,4 +1,4 @@
-﻿"""AI 短剧画布 · 本地后端（仅标准库）
+"""AI 短剧画布 · 本地后端（仅标准库）
 
 职责：
   1. 提供前端静态文件
@@ -62,7 +62,22 @@ def _worker():
             if job.get("kind") == "image":
                 engine = (job.get("engine") or "sdxl").lower()
                 ref = _stage_image(job.get("ref"))
-                if engine == "i2i" and ref:
+                iprof = job.get("profile")
+                if iprof:
+                    w, h = imaging.SIZES.get(job.get("aspect", "9:16"), (768, 1344))
+                    graph = profiles.build(
+                        iprof,
+                        {
+                            "prompt": job["prompt"],
+                            "seed": int(job.get("seed", 0)),
+                            "steps": int(job.get("steps", 28)),
+                            "width": job.get("width") or w,
+                            "height": job.get("height") or h,
+                        },
+                        image_name=ref,
+                    )
+                    text, ok = job["prompt"], True
+                elif engine == "i2i" and ref:
                     graph = imaging.build_i2i(
                         job["prompt"], ref,
                         aspect=job.get("aspect", "9:16"),

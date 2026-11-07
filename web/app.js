@@ -217,6 +217,10 @@
         <div class="row">
           <select data-f="mode">${Object.entries(IMG_MODES).map(([k, v]) =>
             `<option value="${k}" ${k === (n.data.mode || 'single') ? 'selected' : ''}>${v}</option>`).join('')}</select>
+          <select data-f="profile">
+            <option value="">默认（SDXL）</option>
+            ${PROFILES.filter((p) => p.kind === 'image').map((p) => <option value="${p.id}" ${p.id === n.data.profile ? 'selected' : ''}>${esc(p.name)}${p.ready ? '' : '（缺模型）'}</option>).join('')}
+          </select>
           <select data-f="engine">
             <option value="sdxl" ${(n.data.engine || 'sdxl') === 'sdxl' ? 'selected' : ''}>SDXL</option>
             <option value="i2i" ${n.data.engine === 'i2i' ? 'selected' : ''}>图生图</option>
@@ -701,6 +705,7 @@
           prompt: n.data.prompt, mode: n.data.mode || 'single',
           aspect: n.data.aspect, seed: n.data.seed,
           engine: n.data.engine || 'sdxl',
+          profile: n.data.profile || undefined,
           ref: (S.subject && S.subject.filename) || undefined,
           llm: getLLM(),
         } : {
