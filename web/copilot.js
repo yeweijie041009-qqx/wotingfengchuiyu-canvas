@@ -158,19 +158,31 @@
 
     try {
       const isRefine = !!plan;
-      const r = await fetch(isRefine ? '/api/copilot/refine' : '/api/copilot/plan', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isRefine
-          ? { plan, instruction: text, llm: getLLM() }
-          : {
-            text,
-            shots: Number(document.getElementById('cpShots').value) || 4,
-            seconds: Number(document.getElementById('cpSecs').value) || 5,
-            llm: getLLM(),
-          }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || '拆分失败');
+      addMsg('正在拆解剧本…（最多等 90 秒，超时会退回模板分镜）');
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), 90000);
+      let j;
+      try {
+        const r = await fetch(isRefine ? '/api/copilot/refine' : '/api/copilot/plan', {
+          signal: ctl.signal,
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(isRefine
+            ? { plan, instruction: text, llm: getLLM() }
+            : {
+              text,
+              shots: Number(document.getElementById('cpShots').value) || 4,
+              seconds: Number(document.getElementById('cpSecs').value) || 5,
+              llm: getLLM(),
+            }),
+        });
+        j = await r.json();
+        if (!r.ok) throw new Error(j.error || '拆分失败');
+      } catch (e) {
+        if (e && e.name === 'AbortError') throw new Error('等待超时（90 秒），请检查 API Key 或换个模型再试');
+        throw e;
+      } finally {
+        clearTimeout(to);
+      }
       j.style = '';
       build(j);
       addMsg(`已拆成 ${j.shots.length} 个镜头，画布上铺好了图节点和视频节点` +

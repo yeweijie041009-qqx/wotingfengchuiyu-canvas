@@ -98,7 +98,7 @@ def plan(text: str, n_shots: int = 4, style: str = "电影感写实风格",
                 cfg,
                 [{"role": "system", "content": SYSTEM.format(n=n_shots)},
                  {"role": "user", "content": f"剧本/创意：\n{text}\n\n风格：{style}"}],
-                json_mode=True)
+                json_mode=True, timeout=60)
             data = raw if isinstance(raw, dict) else _parse_json(raw)
             shots = _norm(data.get("shots", [])[:n_shots], style, seconds)
             if len(shots) >= 1:
@@ -137,7 +137,7 @@ def refine(current: dict, instruction: str, llm: dict | None = None) -> dict:
         cfg,
         [{"role": "system", "content": sys_p},
          {"role": "user", "content": f"已有分镜：\n{ctx}\n\n修改意见：{instruction}"}],
-        json_mode=True)
+        json_mode=True, timeout=60)
     data = raw if isinstance(raw, dict) else _parse_json(raw)
     shots = _norm(data.get("shots") or current.get("shots", []),
                   current.get("style", ""), 5.0)
