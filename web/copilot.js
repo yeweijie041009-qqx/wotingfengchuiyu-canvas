@@ -1,4 +1,4 @@
-﻿/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
+/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
 (() => {
   const api = window.STUDIO;
   if (!api) return;
@@ -198,7 +198,10 @@
     document.body.appendChild(panel);
     chat = document.getElementById('cpChat');
 
-    panel.querySelector('.cp-close').onclick = () => panel.classList.add('hidden');
+    panel.querySelector('.cp-close').onclick = () => {
+      panel.classList.add('hidden');
+      document.body.classList.remove('cp-open');
+    };
     document.getElementById('cpSend').onclick = go;
     document.getElementById('cpStop').onclick = () => { stopFlag = true; addMsg('正在停止…'); };
     document.getElementById('cpText').addEventListener('keydown', (e) => {
@@ -208,11 +211,13 @@
   }
 
   function toggle() {
-    if (!panel) mount();
-    panel.classList.toggle('hidden');
+    if (!panel) { mount(); document.body.classList.add('cp-open'); return; }
+    const nowHidden = panel.classList.toggle('hidden');
+    document.body.classList.toggle('cp-open', !nowHidden);
   }
 
   window.COPILOT = { toggle };
+  if (location.hash === '#copilot') { toggle(); }
   const btn = document.getElementById('btnCopilot');
   if (btn) btn.onclick = toggle;
 })();
