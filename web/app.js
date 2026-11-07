@@ -263,7 +263,7 @@
     nodesEl.innerHTML = '';
     for (const n of S.nodes) {
       const el = document.createElement('div');
-      el.className = 'node' + (S.sel === n.id ? ' sel' : '');
+      el.className = 'node' + ((S.sel === n.id || (S.multi && S.multi.has(n.id))) ? ' sel' : '');
       el.dataset.id = n.id;
       el.style.left = n.x + 'px';
       el.style.top = n.y + 'px';
@@ -338,16 +338,81 @@
   $('#inspClose').onclick = closeInspector;
 
   /* ---------------- interaction ---------------- */
+  const mqEl = document.createElement('div');
+  mqEl.id = 'marquee';
+  mqEl.style.display = 'none';
+  document.body.appendChild(mqEl);
+
+  function mqPaint() {
+    const a = S.mq;
+    const x = Math.min(a.x0, a.x1), y = Math.min(a.y0, a.y1);
+    const w = Math.abs(a.x1 - a.x0), h = Math.abs(a.y1 - a.y0);
+    mqEl.style.display = 'block';
+    mqEl.style.left = x + 'px';
+    mqEl.style.top = y + 'px';
+    mqEl.style.width = w + 'px';
+    mqEl.style.height = h + 'px';
+  }
+
+  function toast(text) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  function mqFinish() {
+    mqEl.style.display = 'none';
+    if (!S.mq) return;
+    const a = screenToWorld(Math.min(S.mq.x0, S.mq.x1), Math.min(S.mq.y0, S.mq.y1));
+    const b = screenToWorld(Math.max(S.mq.x0, S.mq.x1), Math.max(S.mq.y0, S.mq.y1));
+    S.multi = S.multi || new Set();
+    if (!S.additive) S.multi.clear();
+    for (const n of S.nodes) {
+      const hit = !(n.x > b.x || n.x + n.w < a.x || n.y > b.y || n.y + n.h < a.y);
+      if (hit) S.multi.add(n.id);
+    }
+    S.mq = null;
+    S.sel = null;
+    render();
+    if (S.multi.size) toast(`已选中 ${S.multi.size} 个节点 · 按 Delete 删除`);
+  }
+
   viewport.addEventListener('mousedown', (e) => {
     if (e.target.closest('.node') || e.target.closest('#inspector')) return;
     if (e.button !== 0 && e.button !== 1) return;
+    S.additive = e.shiftKey || e.ctrlKey;
     S.pan = { sx: e.clientX, sy: e.clientY, ox: S.x, oy: S.y };
     viewport.classList.add('panning');
     menu.classList.add('hidden');
+    // 长按空白（260ms 内基本不动）→ 进入框选
+    clearTimeout(S.mqTimer);
+    if (e.button === 0) {
+      S.mqTimer = setTimeout(() => {
+        if (!S.pan) return;
+        S.pan = null;
+        viewport.classList.remove('panning');
+        S.mq = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
+        mqPaint();
+      }, 260);
+    }
   });
 
   window.addEventListener('mousemove', (e) => {
+    if (S.mq) {
+      S.mq.x1 = e.clientX;
+      S.mq.y1 = e.clientY;
+      mqPaint();
+      return;
+    }
     if (S.pan) {
+      if (Math.abs(e.clientX - S.pan.sx) + Math.abs(e.clientY - S.pan.sy) > 8) clearTimeout(S.mqTimer);
       S.x = S.pan.ox + (e.clientX - S.pan.sx);
       S.y = S.pan.oy + (e.clientY - S.pan.sy);
       applyView();
@@ -371,6 +436,8 @@
   });
 
   window.addEventListener('mouseup', (e) => {
+    clearTimeout(S.mqTimer);
+    if (S.mq) { mqFinish(); return; }
     if (S.pan) { S.pan = null; viewport.classList.remove('panning'); }
     S.drag = null;
     if (S.conn) {
@@ -639,12 +706,38 @@
     if (!e.target.closest('#nodeMenu')) $('#nodeMenu').classList.add('hidden');
   });
 
-  /* 键盘：Delete / Backspace / Enter 删除选中的节点（在输入框里打字时不触发） */
+  /* 键盘：Delete / Backspace 删除（支持多选）；Ctrl+A 全选；Esc 取消选择 */
   document.addEventListener('keydown', (e) => {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    const del = e.key === 'Delete' || e.key === 'Backspace';
+    if (e.key === 'Escape') {
+      S.multi = new Set();
+      S.sel = null;
+      render();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      S.multi = new Set(S.nodes.map((n) => n.id));
+      S.sel = null;
+      render();
+      toast(`已全选 ${S.multi.size} 个节点 · 按 Delete 删除`);
+      return;
+    }
+    if (del && S.multi && S.multi.size) {
+      e.preventDefault();
+      const ids = [...S.multi];
+      ids.forEach((id) => removeNode(id));
+      S.multi.clear();
+      S.sel = null;
+      $('#inspector').classList.add('hidden');
+      render();
+      toast(`已删除 ${ids.length} 个节点`);
+      return;
+    }
     if (!S.sel) return;
-    if (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Enter') {
+    if (del || e.key === 'Enter') {
       e.preventDefault();
       const id = S.sel;
       removeNode(id);
@@ -895,7 +988,7 @@
     const old = nodeEl(n.id);
     if (!old) return;
     const el = document.createElement('div');
-    el.className = 'node' + (S.sel === n.id ? ' sel' : '');
+    el.className = 'node' + ((S.sel === n.id || (S.multi && S.multi.has(n.id))) ? ' sel' : '');
     el.dataset.id = n.id;
     el.style.cssText = old.style.cssText;
     el.innerHTML = nodeHTML(n);

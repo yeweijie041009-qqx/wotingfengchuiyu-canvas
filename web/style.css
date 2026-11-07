@@ -416,3 +416,19 @@ body.cp-open #agentbar {
 .topbar .tools::-webkit-scrollbar { display: none; }
 .topbar .zoom { flex: 0 0 auto; }
 .topbar .tools .btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* ---------- 框选 ---------- */
+#marquee {
+  position: fixed; z-index: 900; pointer-events: none;
+  border: 1px dashed var(--accent);
+  background: rgba(91, 140, 255, .12);
+  border-radius: 2px;
+}
+#toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(12px);
+  background: rgba(24,28,36,.96); color: var(--text); border: 1px solid var(--line);
+  padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 1200;
+  opacity: 0; transition: .18s; pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
