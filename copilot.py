@@ -149,3 +149,50 @@ def refine(current: dict, instruction: str, llm: dict | None = None,
             "title": data.get("title") or current.get("title", ""),
             "logline": data.get("logline") or current.get("logline", ""),
             "shots": shots}
+
+CHAR_SYSTEM = """你是角色设计师。根据下面的分镜，提炼出**同一个主角**的外观设定。
+
+只输出 JSON：
+{
+  "image_prompt": "英文，一张角色设定图：全身正面站姿、纯色背景、清晰五官与服装细节、同一画风",
+  "subject": "中文一句话，写死这个人的外观：年龄、发型、体型、服装、标志性特征",
+  "name": "角色名"
+}
+
+要求：
+- 只描述**一个**主角（分镜里最主要的那个）
+- 外观必须具体到可以被反复画出来（发型颜色、衣服款式与颜色、体型、配饰）
+- 不要写场景、动作、光线
+"""
+
+
+def character(pl: dict, llm: dict | None = None) -> dict:
+    """根据分镜产出「角色设定」：一张定妆图的提示词 + 一段锁人用的主体描述。"""
+    cfg = llm if (llm and llm.get("api_key")) else director.load_cfg()
+    shots = pl.get("shots", [])
+    brief = json.dumps([{k: s.get(k, "") for k in ("action", "scene", "beat")} for s in shots],
+                       ensure_ascii=False)
+
+    if cfg.get("api_key"):
+        try:
+            raw = llm_mod.complete(
+                cfg,
+                [{"role": "system", "content": CHAR_SYSTEM},
+                 {"role": "user", "content": f"片名：{pl.get('title','')}\n梗概：{pl.get('logline','')}\n分镜：{brief}"}],
+                json_mode=True, timeout=60)
+            data = raw if isinstance(raw, dict) else json.loads(raw)
+            if data.get("image_prompt"):
+                return {"provider": "llm", "name": data.get("name", "主角"),
+                        "image_prompt": data["image_prompt"],
+                        "subject": data.get("subject", "")}
+        except Exception:
+            pass
+
+    # 兜底：用第一镜的描述反推
+    base = (shots[0].get("image_prompt") if shots else "") or "主角"
+    return {
+        "provider": "template", "name": "主角",
+        "image_prompt": ("character design sheet, full body, front view, neutral pose, "
+                         f"plain light background, detailed outfit, {base}"),
+        "subject": base[:80],
+    }

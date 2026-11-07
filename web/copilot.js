@@ -27,6 +27,7 @@
     </div>`;
 
   let panel, chat, plan = null, nodes = { images: [], videos: [] }, running = false, stopFlag = false;
+  let charSubject = '';
 
   /* ---------- 时长 / 镜头数：从文字里自动推断 ---------- */
   const CN = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
@@ -108,6 +109,7 @@
     S.nodes = S.nodes.filter((n) => !old.has(n.id));
     S.edges = S.edges.filter((e) => !old.has(e.from) && !old.has(e.to));
     nodes = { images: [], videos: [] };
+    charSubject = '';
 
     const box = document.getElementById('nodes');
     const cx = box ? box.parentElement.scrollLeft / 1 - 0 : 0;
@@ -120,7 +122,16 @@
       pl.shots.map((s, i) => `${i + 1}. [${s.shot_size}] ${s.action}${s.dialogue ? ' 对白：' + s.dialogue : ''}`).join('\n');
     nodes.script = script;
 
-    const L = layout(baseX + 400, baseY);
+    // 角色设定节点（定妆图）：所有镜头都参考它
+    const char = newNode('image', baseX + 400, baseY);
+    char.data.mode = 'single';
+    char.data.aspect = '16:9';
+    char.data.prompt = '角色设定…';
+    char.data.status = '待出角色设定';
+    nodes.char = char;
+    S.edges.push({ from: script.id, to: char.id });
+
+    const L = layout(baseX + 400, baseY + 460);
     pl.shots.forEach((s, i) => {
       const img = newNode('image', L.baseX, L.baseY + i * 360);
       img.data.prompt = s.image_prompt;
@@ -145,15 +156,38 @@
     if (key) key.click();
   }
 
+  async function renderChar() {
+    const char = nodes.char;
+    if (!char) return;
+    char.data.status = '出角色设定…';
+    render();
+    const r = await fetch('/api/image/render', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: char.data.prompt, engine: 'sdxl', aspect: char.data.aspect,
+        seed: Math.floor(Math.random() * 1e6), llm: getLLM(),
+      }),
+    });
+    const j0 = await r.json();
+    if (!r.ok) throw new Error(j0.error || '角色设定出图失败');
+    const done = await job(j0.id);
+    char.data.file = (done.files && done.files[0]) || null;
+    char.data.status = '角色设定完成';
+    char.data.statusClass = 'ok';
+    render();
+    addMsg('角色设定图出好了 —— 这个人物将作为所有镜头的参考', 'ok');
+  }
+
   async function runImages() {
+    if (nodes.char && !nodes.char.data.file) await renderChar();
     for (let i = 0; i < nodes.images.length; i++) {
       if (stopFlag) return;
       const img = nodes.images[i];
       img.data.status = '出图中…';
       render();
-      // 第 2 镜起，用第 1 镜当角色参考，尽量锁住同一个人
-      const first = nodes.images[0];
-      const ref = (i > 0 && first && first.data.file) ? first.data.file.filename : undefined;
+      // 每一镜都参考「角色设定图」，锁住同一个人
+      const charRef0 = nodes.char && nodes.char.data.file ? nodes.char.data.file.filename : null;
+      const ref = charRef0 || undefined;
       const r = await fetch('/api/image/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -174,11 +208,11 @@
   }
 
   async function runVideos() {
-    // 统一用第 1 镜的图当「角色参考」走 ref2va，比每镜各自首帧更稳
-    const first = nodes.images[0];
-    const charRef = (first && first.data.file) ? first.data.file.filename : null;
-    const subject = (plan && plan.shots && plan.shots[0]) ? plan.shots[0].action : '';
-    if (charRef) addMsg('视频统一用第 1 镜的人物当参考（锁角色），动作服从度会低一些但人物一致', 'ok');
+    // 统一用「角色设定图」走 ref2va，保证每个镜头是同一个人
+    const charNode = nodes.char;
+    const charRef = (charNode && charNode.data.file) ? charNode.data.file.filename : null;
+    const subject = charSubject || ((plan && plan.shots && plan.shots[0]) ? plan.shots[0].action : '');
+    if (charRef) addMsg('视频一律用【角色设定图】做 ref2va 参考，保证同一个人', 'ok');
 
     for (let i = 0; i < nodes.videos.length; i++) {
       if (stopFlag) return;
@@ -253,6 +287,20 @@
       }
       j.style = '';
       build(j);
+      try {
+        const cr = await fetch('/api/copilot/character', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: j, llm: getLLM() }),
+        });
+        const cj = await cr.json();
+        if (cr.ok && nodes.char && cj.image_prompt) {
+          nodes.char.data.prompt = cj.image_prompt;
+          nodes.char.data.status = '待出角色设定';
+          charSubject = cj.subject || '';
+          render();
+          addMsg(`角色：${cj.name || '主角'} —— ${cj.subject || '（无描述）'}`, 'ok');
+        }
+      } catch (e) { /* 角色设定失败不阻塞主流程 */ }
       addMsg(`已用【${j.skill || '模板'}】拆成 ${j.shots.length} 个镜头，画布上铺好了图节点和视频节点` +
         (j.note ? `（${j.note}）` : ''), 'ok');
 

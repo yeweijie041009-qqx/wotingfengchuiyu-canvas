@@ -580,6 +580,11 @@ class Handler(BaseHTTPRequestHandler):
                     float(body.get("seconds", 5)),
                     llm=body.get("llm"),
                 ))
+            if p == "/api/copilot/character":
+                try:
+                    return self._json(copilot.character(body.get("plan") or {}, llm=body.get("llm")))
+                except Exception as e:  # noqa: BLE001
+                    return self._json({"error": str(e)[:300]}, 400)
             if p == "/api/copilot/refine":
                 if not (body.get("instruction") or "").strip():
                     return self._json({"error": "instruction 不能为空"}, 400)
