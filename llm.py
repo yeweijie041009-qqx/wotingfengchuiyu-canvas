@@ -1,4 +1,4 @@
-"""统一的 OpenAI 兼容调用层。
+﻿"""统一的 OpenAI 兼容调用层。
 
 任何提供 /chat/completions 的服务都能接：DeepSeek、OpenAI、Kimi、智谱、
 通义（compatible-mode）、硅基流动、OpenRouter、本地 Ollama / vLLM …
@@ -104,14 +104,23 @@ def complete(cfg: dict, messages: list[dict], *, json_mode: bool = True,
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
 
+    def _try(u: str):
+        return _post(u, key, payload, timeout)
+
     try:
-        data = _post(url, key, payload, timeout)
-    except urllib.error.HTTPError as e:
-        if e.code not in (400, 422):
+        data = _try(url)
+    except RuntimeError as e:
+        msg = str(e)
+        # 1) OpenAI 兼容服务大多要求 /v1 前缀（Kimi / 硅基流动 / OpenRouter / Ollama…）
+        if "404" in msg and "/v1" not in base:
+            url = base + "/v1/chat/completions"
+            data = _try(url)
+        # 2) 有些服务不认 response_format，去掉再试
+        elif "400" in msg or "422" in msg:
+            payload.pop("response_format", None)
+            data = _try(url)
+        else:
             raise
-        # 有些服务不认 response_format，去掉再试
-        payload.pop("response_format", None)
-        data = _post(url, key, payload, timeout)
 
     content = data["choices"][0]["message"]["content"]
     if not json_mode:
