@@ -1,4 +1,4 @@
-﻿"""AI 短剧画布 · 本地后端（仅标准库）
+"""AI 短剧画布 · 本地后端（仅标准库）
 
 职责：
   1. 提供前端静态文件
@@ -563,6 +563,12 @@ class Handler(BaseHTTPRequestHandler):
                     llm_cfg=body.get("llm"),
                     fmt=body.get("format", "series"),
                 ))
+            if p == "/api/llm/models":
+                try:
+                    cfg = body.get("llm") or {}
+                    return self._json({"models": llm.models(cfg)})
+                except Exception as e:  # noqa: BLE001
+                    return self._json({"error": str(e)[:300]}, 400)
             if p == "/api/copilot/plan":
                 text = (body.get("text") or "").strip()
                 if not text:

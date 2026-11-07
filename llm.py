@@ -126,3 +126,32 @@ def complete(cfg: dict, messages: list[dict], *, json_mode: bool = True,
     if not json_mode:
         return {"text": content, "raw": data}
     return {"data": _extract_json(content), "text": content, "raw": data}
+def models(cfg: dict, timeout: int = 30) -> list[str]:
+    """列出服务商可用模型（GET /models，自动补 /v1）。"""
+    base = (cfg.get("base_url") or "").rstrip("/")
+    key = cfg.get("api_key") or ""
+    if not base:
+        raise RuntimeError("先填 Base URL")
+    if not base.endswith("/v1") and "/v1/" not in base:
+        candidates = [base + "/v1/models", base + "/models"]
+    else:
+        candidates = [base + "/models"]
+    last = None
+    for url in candidates:
+        try:
+            req = urllib.request.Request(url, headers={"Authorization": "Bearer " + key})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read())
+            items = data.get("data") or data.get("models") or []
+            ids = [m.get("id") or m.get("name") for m in items if isinstance(m, dict)]
+            return [i for i in ids if i]
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise RuntimeError("API Key 无效或没有权限，先确认 key 能正常调用") from None
+            if e.code == 404:
+                last = e
+                continue
+            raise RuntimeError(f"拿不到模型列表：HTTP {e.code}") from None
+        except Exception as e:  # noqa: BLE001
+            last = e
+    raise RuntimeError(f"拿不到模型列表：{last}")
