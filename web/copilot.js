@@ -146,6 +146,8 @@
       vid.data.preset = 'draft';
       vid.data.aspect = '16:9';
       vid.data.status = '待出视频';
+      vid.data.refMode = 'ref2va';   // 等角色设定图出来再挂上
+      vid.data.useChar = true;
       nodes.videos.push(vid);
 
       S.edges.push({ from: script.id, to: img.id });
@@ -175,6 +177,16 @@
     char.data.status = '角色设定完成';
     char.data.statusClass = 'ok';
     render();
+    const fn = char.data.file && char.data.file.filename;
+    if (fn) {
+      nodes.videos.forEach((v) => {
+        v.data.image = fn;
+        if (!S.edges.some((e) => e.from === char.id && e.to === v.id)) {
+          S.edges.push({ from: char.id, to: v.id });
+        }
+      });
+      render();
+    }
     addMsg('角色设定图出好了 —— 这个人物将作为所有镜头的参考', 'ok');
   }
 
@@ -226,7 +238,7 @@
         body: JSON.stringify({
           prompt: vid.data.prompt, seconds: vid.data.seconds, preset: 'draft',
           aspect: vid.data.aspect, seed: Math.floor(Math.random() * 1e6),
-          image: useRef ? charRef : (img && img.data.file ? img.data.file.filename : undefined),
+          image: vid.data.image || (useRef ? charRef : (img && img.data.file ? img.data.file.filename : undefined)),
           ref_mode: useRef,
           subject: useRef ? subject : undefined,
           llm: getLLM(),
