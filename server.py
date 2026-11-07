@@ -1,4 +1,4 @@
-"""AI 短剧画布 · 本地后端（仅标准库）
+﻿"""AI 短剧画布 · 本地后端（仅标准库）
 
 职责：
   1. 提供前端静态文件
@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import sys
 import queue
 import subprocess
 import threading
@@ -34,7 +35,7 @@ import skills_loader
 import translator
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-WEB = os.path.join(ROOT, "web")
+WEB = os.path.join(getattr(sys, "_MEIPASS", ROOT), "web")
 PROJECTS = os.path.join(ROOT, "projects")
 os.makedirs(PROJECTS, exist_ok=True)
 

@@ -15,7 +15,15 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))      # studio/
 BASE = os.path.dirname(HERE)                            # 项目根目录
-CONFIG_PATH = os.path.join(HERE, "config.json")
+
+# 打包成 exe 后：代码在 _MEIPASS 里，配置和数据跟着 exe 走
+FROZEN = getattr(sys, "frozen", False)
+MEIPASS = getattr(sys, "_MEIPASS", HERE)
+if FROZEN:
+    BASE = os.path.dirname(os.path.abspath(sys.executable))
+    CONFIG_PATH = os.path.join(BASE, "config.json")
+else:
+    CONFIG_PATH = os.path.join(HERE, "config.json")
 
 
 def _load_config() -> dict:

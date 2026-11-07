@@ -1,13 +1,14 @@
-"""Skill 加载器：把 .skill 包（SKILL.md + references/）读成可用的提示词。
+﻿"""Skill 加载器：把 .skill 包（SKILL.md + references/）读成可用的提示词。
 
 目录约定：studio/skills/<skill-name>/SKILL.md + references/*.md
 """
 from __future__ import annotations
 
 import os
+import sys
 import re
 
-SKILLS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
+SKILLS_DIR = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "skills")
 
 
 def list_skills() -> list[dict]:
