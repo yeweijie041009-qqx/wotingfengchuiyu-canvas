@@ -11,8 +11,10 @@
     </div>
     <div class="cp-chat" id="cpChat"></div>
     <div class="cp-opts">
-      <label>镜头 <input id="cpShots" type="number" min="1" max="12" value="4"></label>
-      <label>时长 <input id="cpSecs" type="number" min="2" max="10" value="5"></label>
+      <label title="整片总时长，会从你写的话里自动识别">总时长
+        <input id="cpTotal" type="number" min="2" max="180" value="10"> 秒
+      </label>
+      <span id="cpSplit" class="cp-split">≈ 2 镜 × 5 秒</span>
       <label><input id="cpAuto" type="checkbox" checked> 自动出图</label>
     </div>
     <div class="cp-input">
@@ -24,6 +26,53 @@
     </div>`;
 
   let panel, chat, plan = null, nodes = { images: [], videos: [] }, running = false, stopFlag = false;
+
+  /* ---------- 时长 / 镜头数：从文字里自动推断 ---------- */
+  const CN = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+
+  function parseTotal(text) {
+    let m = text.match(/(\d+(?:\.\d+)?)\s*(分钟|分|min|秒钟|秒|s)(?![a-z])/i);
+    if (m) {
+      const v = parseFloat(m[1]);
+      return /分|min/i.test(m[2]) ? Math.round(v * 60) : Math.round(v);
+    }
+    m = text.match(/([一二两三四五六七八九十]+)\s*(分钟|秒)/);
+    if (m) {
+      const v = CN[m[1]] || 10;
+      return m[2] === '分钟' ? v * 60 : v;
+    }
+    return null;
+  }
+
+  function parseShots(text) {
+    let m = text.match(/(\d+)\s*(个)?\s*(镜头|分镜|镜)/);
+    if (m) return Math.max(1, Math.min(24, parseInt(m[1], 10)));
+    m = text.match(/([一二两三四五六七八九十]+)\s*(个)?\s*(镜头|分镜|镜)/);
+    if (m) return Math.max(1, Math.min(24, CN[m[1]] || 1));
+    return null;
+  }
+
+  function splitPlan() {
+    const totalEl = document.getElementById('cpTotal');
+    const total = Math.max(2, Math.min(180, Number(totalEl && totalEl.value) || 10));
+    const text = (document.getElementById('cpText') || {}).value || '';
+    const wantShots = parseShots(text);
+    // 单镜不超过 10 秒；有明确镜数就按镜数均分
+    // 单镜按 5 秒切（H3 出片质量与显存更稳），有明确镜数就听用户的
+    const shots = wantShots || Math.max(1, Math.min(12, Math.round(total / 5)));
+    const seconds = Math.max(2, Math.min(10, Math.round((total / shots) * 10) / 10));
+    return { shots, seconds, total };
+  }
+
+  function refreshSplit() {
+    const { shots, seconds, total } = splitPlan();
+    const el = document.getElementById('cpSplit');
+    if (el) {
+      const real = Math.round(shots * seconds * 10) / 10;
+      el.textContent = `≈ ${shots} 镜 × ${seconds} 秒` +
+        (Math.abs(real - total) > 0.6 ? `（接近 ${total} 秒）` : '');
+    }
+  }
 
   function addMsg(text, cls) {
     const d = document.createElement('div');
@@ -175,8 +224,7 @@
             ? { plan, instruction: text, llm: getLLM() }
             : {
               text,
-              shots: Number(document.getElementById('cpShots').value) || 4,
-              seconds: Number(document.getElementById('cpSecs').value) || 5,
+              ...splitPlan(),
               llm: getLLM(),
             }),
         });
@@ -222,9 +270,17 @@
     };
     document.getElementById('cpSend').onclick = go;
     document.getElementById('cpStop').onclick = () => { stopFlag = true; addMsg('正在停止…'); };
-    document.getElementById('cpText').addEventListener('keydown', (e) => {
+    const ta = document.getElementById('cpText');
+    ta.addEventListener('input', () => {
+      const t = parseTotal(ta.value);
+      if (t) document.getElementById('cpTotal').value = t;
+      refreshSplit();
+    });
+    document.getElementById('cpTotal').addEventListener('input', refreshSplit);
+    ta.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); }
     });
+    refreshSplit();
     addMsg('你好，我是你的 AI 创作伙伴。\n写一句话，我把它拆成镜头、铺到画布上，再逐镜出图、出视频。', 'hello');
   }
 
