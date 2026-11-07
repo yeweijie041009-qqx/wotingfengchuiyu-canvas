@@ -1,4 +1,4 @@
-/* AI 短剧画布 · 前端（零依赖） */
+﻿/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
               conn: null, drag: null, pan: null };
@@ -10,6 +10,7 @@
   const RES = ['360P', '416P', '480P', '540P', '720P'];
   const ASPECT = ['9:16', '16:9', '1:1', '3:4', '4:3'];
   const PRESET_NAME = { draft: '草稿 360P/4步', standard: '标准 480P/8步', fine: '精细 720P/8步' };
+  let PROFILES = [];
 
   const uid = () => 'n' + (++S.seq);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -89,6 +90,7 @@
   /* ---------------- render ---------------- */
   const TYPE_NAME = { director: '导演 · 剧本', script: '脚本', video: '视频 · H3', text: '文本', image: '图片', audio: '音频' };
   const IMG_MODES = { single: '单图', turnaround: '角色三视图', grid4: '四宫格', grid9: '九宫格' };
+  let PROFILES = [];
 
   function nodeHTML(n) {
     let body = '';
@@ -183,6 +185,14 @@
           <select data-f="refMode" title="有图时怎么用这张图">
             <option value="i2va" ${(n.data.refMode || 'i2va') === 'i2va' ? 'selected' : ''}>当首帧</option>
             <option value="ref2va" ${n.data.refMode === 'ref2va' ? 'selected' : ''}>参考图锁角色</option>
+          </select>
+        </div>
+        <div class="row">
+          <span class="lbl">模型</span>
+          <select data-f="profile">
+            <option value="">默认（H3）</option>
+            ${PROFILES.filter((p) => p.kind !== 'image').map((p) =>
+              `<option value="${p.id}" ${p.id === n.data.profile ? 'selected' : ''}>${esc(p.name)}${p.ready ? '' : '（缺模型）'}</option>`).join('')}
           </select>
         </div>
         <div class="row">
@@ -698,6 +708,7 @@
           preset: n.data.preset || 'standard',
           aspect: n.data.aspect, width: n.data.width, height: n.data.height,
           seed: n.data.seed, turbo: n.data.turbo,
+          profile: n.data.profile || undefined,
           image: n.data.image || undefined,
           ref_mode: n.data.refMode === 'ref2va',
           subject: S.subjectDesc || undefined,
@@ -1003,6 +1014,13 @@
   $('#agClose').onclick = () => { $('#agPanel').classList.add('hidden'); };
 
   /* ---------------- status / save ---------------- */
+  async function loadProfiles() {
+    try {
+      const j = await (await fetch('/api/profiles')).json();
+      PROFILES = j.profiles || [];
+      render();
+    } catch (e) { /* 忽略：没有档案就用默认 */ }
+  }
   async function health() {
     try {
       const r = await fetch('/api/health');
@@ -1167,6 +1185,7 @@
   render();
   load();
   health();
+  loadProfiles();
   S.subject = JSON.parse(localStorage.getItem('studio.subject') || 'null');
   renderSubjectChip();
   setInterval(health, 8000);

@@ -30,6 +30,7 @@ import h3_prompt
 import imaging
 import llm
 import paths
+import profiles
 import screenwriter
 import skills_loader
 import translator
@@ -87,39 +88,55 @@ def _worker():
                         ckpt=job.get("ckpt") or None,
                     )
             else:
-                m = h3.models()
-                res, steps, lora = h3.resolve_preset(job.get("preset", "standard"), m)
-                if job.get("resolution"):
-                    res = job["resolution"]
-                if job.get("steps"):
-                    steps = int(job["steps"])
-                vid_mode = "ref2va" if (job.get("ref_mode") and job.get("image")) else job.get("mode", "t2va")
-                vid_prompt = job["prompt"]
-                if vid_mode == "ref2va":
-                    vid_prompt = h3_prompt.build_ref(
-                        job["prompt"], job.get("subject", ""),
-                        duration=float(job.get("seconds", 5)),
-                        shot_size=job.get("shot_size", "中景"),
-                        camera=job.get("camera", ""),
-                        dialogue=job.get("dialogue", ""),
-                        soundscape=job.get("soundscape", ""),
+                prof = job.get("profile")
+                if prof:
+                    # 走「模型档案」：任何 ComfyUI 工作流都能接
+                    graph = profiles.build(
+                        prof,
+                        {
+                            "prompt": job["prompt"],
+                            "seconds": float(job.get("seconds", 5)),
+                            "seed": int(job.get("seed", 0)),
+                            "width": job.get("width"),
+                            "height": job.get("height"),
+                            "steps": job.get("steps"),
+                        },
+                        image_name=_stage_image(job.get("image")),
                     )
-                graph = h3.build_graph(
-                    vid_prompt,
-                    mode=vid_mode,
-                    resolution=res,
-                    aspect=job.get("aspect", "9:16"),
-                    width=int(job.get("width", 720)),
-                    height=int(job.get("height", 1280)),
-                    seconds=float(job.get("seconds", 5)),
-                    fps=float(job.get("fps", 24)),
-                    seed=int(job.get("seed", 0)),
-                    steps=steps,
-                    lora=lora,
-                    use_turbo=bool(job.get("turbo", True)),
-                    image=_stage_image(job.get("image")),
-                    m=m,
-                )
+                else:
+                    m = h3.models()
+                    res, steps, lora = h3.resolve_preset(job.get("preset", "standard"), m)
+                    if job.get("resolution"):
+                        res = job["resolution"]
+                    if job.get("steps"):
+                        steps = int(job["steps"])
+                    vid_mode = "ref2va" if (job.get("ref_mode") and job.get("image")) else job.get("mode", "t2va")
+                    vid_prompt = job["prompt"]
+                    if vid_mode == "ref2va":
+                        vid_prompt = h3_prompt.build_ref(
+                            job["prompt"], job.get("subject", ""),
+                            duration=float(job.get("seconds", 5)),
+                            shot_size=job.get("shot_size", "中景"),
+                            camera=job.get("camera", ""),
+                            dialogue=job.get("dialogue", ""),
+                            soundscape=job.get("soundscape", ""),
+                        )
+                    graph = h3.build_graph(
+                        vid_prompt,
+                        mode=vid_mode,
+                        resolution=res,
+                        aspect=job.get("aspect", "9:16"),
+                        width=int(job.get("width", 720)),
+                        height=int(job.get("height", 1280)),
+                        seconds=float(job.get("seconds", 5)),
+                        fps=float(job.get("fps", 24)),
+                        seed=int(job.get("seed", 0)),
+                        steps=steps,
+                        lora=lora,
+                        use_turbo=bool(job.get("turbo", True)),
+                        image=_stage_image(job.get("image")),
+                        m=m,
+                    )
             with GPU:
                 pid = h3.submit(graph)
                 job["comfy_prompt_id"] = pid
@@ -366,6 +383,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if p == "/api/health":
                 return self._json({"ok": True, "comfy": h3.alive(), "queue": JOB_Q.qsize()})
+            if p == "/api/profiles":
+                return self._json({"profiles": profiles.list_profiles()})
             if p == "/api/presets":
                 return self._json({"presets": [dict(key=k, **v) for k, v in h3.PRESETS.items()]})
             if p == "/api/skills":
