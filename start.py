@@ -18,12 +18,33 @@ sys.path.insert(0, HERE)
 import paths  # noqa: E402
 
 
+def _port_open(port: int) -> bool:
+    import socket
+    s = socket.socket()
+    s.settimeout(0.6)
+    try:
+        return s.connect_ex(("127.0.0.1", port)) == 0
+    finally:
+        s.close()
+
+
 def main() -> int:
     if "--check" in sys.argv:
         import json
         print(json.dumps(paths.describe(), ensure_ascii=False, indent=2))
         print("extra_model_paths.yaml ->", paths.extra_model_paths_yaml(
             os.path.join(HERE, "extra_model_paths.yaml")))
+        return 0
+
+    url0 = f"http://127.0.0.1:{paths.PORT}"
+    # 已经在跑了：直接开浏览器，不重复启动
+    if "--force" not in sys.argv and _port_open(paths.PORT):
+        print(f"画布已经在运行：{url0}")
+        try:
+            webbrowser.open(url0)
+        except Exception:
+            pass
+        time.sleep(1.5)
         return 0
 
     paths.ensure_dirs()
