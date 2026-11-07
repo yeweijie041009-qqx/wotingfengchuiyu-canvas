@@ -305,17 +305,11 @@
         (j.note ? `（${j.note}）` : ''), 'ok');
 
       if (document.getElementById('cpAuto').checked) {
-        await runImages();
-        if (document.getElementById('cpAutoVid').checked) {
-          addMsg('出图完成，按设置直接出视频…', 'ok');
-          await runVideos();
-          addMsg('全部完成，可以在画布上拼接或下载。', 'ok');
-        } else {
-          addMsg('图片出完了 —— 先检查人物是否一致。\n' +
-            '满意就点「继续出视频」；不满意可以改某个图片节点的提示词后点「重出图」，' +
-            '或用第一张图做角色参考再出。', 'ok');
-          addActions();
-        }
+        await renderChar();
+        addMsg('角色设定图出来了 —— 先确认这个人对不对。\n' +
+          '对就点「角色 OK，出镜头图」；不对就点「重出角色设定」或直接改角色节点的提示词。', 'ok');
+        addActionsChar();
+        return;
       }
     } catch (e) {
       addMsg('出错：' + (e.message || e), 'err');
@@ -327,6 +321,48 @@
     }
   }
 
+  /* ---------- 角色设定确认 ---------- */
+  function addActionsChar() {
+    const box = document.createElement('div');
+    box.className = 'cp-msg cp-actions-box';
+    box.innerHTML = `
+      <button class="btn primary" data-a="next">角色 OK，出镜头图</button>
+      <button class="btn" data-a="redo">重出角色设定</button>`;
+    box.querySelector('[data-a="next"]').onclick = async (e) => {
+      e.target.disabled = true;
+      box.querySelector('[data-a="redo"]').disabled = true;
+      try {
+        addMsg('开始逐镜出图（每镜参考这个角色）…');
+        await runImages();
+        if (document.getElementById('cpAutoVid').checked) {
+          addMsg('出图完成，按设置直接出视频…', 'ok');
+          await runVideos();
+          addMsg('全部完成。', 'ok');
+        } else {
+          addMsg('图片出完了 —— 检查人物是否一致。\n满意就点「继续出视频」，不满意点「重出图」。', 'ok');
+          addActions();
+        }
+      } catch (err) {
+        addMsg('出错：' + (err.message || err), 'err');
+      } finally {
+        box.remove();
+      }
+    };
+    box.querySelector('[data-a="redo"]').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        if (nodes.char) nodes.char.data.file = null;
+        await renderChar();
+        addMsg('重出好了，满意就点「角色 OK，出镜头图」。', 'ok');
+      } catch (err) {
+        addMsg('重出角色失败：' + (err.message || err), 'err');
+      } finally {
+        e.target.disabled = false;
+      }
+    };
+    chat.appendChild(box);
+    chat.scrollTop = chat.scrollHeight;
+  }
   /* ---------- 出图之后的「确认 / 继续」按钮 ---------- */
   function addActions() {
     const box = document.createElement('div');
