@@ -328,9 +328,9 @@ html[data-ui="xlarge"] .node input[type="number"] { min-width: 150px; }
 
 /* ---------- AI 创作伙伴（右侧面板） ---------- */
 /* 面板自己控制字号与宽度，不跟随全局 Aa 放大，避免"字太大、面板太宽" */
-:root { --cpw: 420px; --cpfs: 15px; --tbh: 52px; }
-html[data-ui="large"] { --cpw: 480px; --cpfs: 17px; --tbh: 86px; }
-html[data-ui="xlarge"] { --cpw: 540px; --cpfs: 18px; --tbh: 104px; }
+:root { --cpw: 520px; --cpfs: 17px; --tbh: 52px; }
+html[data-ui="large"] { --cpw: 640px; --cpfs: 21px; --tbh: 86px; }
+html[data-ui="xlarge"] { --cpw: 760px; --cpfs: 24px; --tbh: 104px; }
 
 #copilot {
   position: fixed; top: var(--tbh); right: 0; bottom: 0; width: var(--cpw); z-index: 28;
@@ -346,7 +346,7 @@ html[data-ui="xlarge"] { --cpw: 540px; --cpfs: 18px; --tbh: 104px; }
   flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel2);
 }
-.cp-title { font-weight: 600; font-size: 1em; letter-spacing: .02em; }
+.cp-title { font-weight: 600; font-size: 1.05em; letter-spacing: .02em; }
 .cp-close {
   background: none; border: 0; color: var(--muted); font-size: 18px;
   line-height: 1; cursor: pointer; padding: 0 2px;
@@ -359,7 +359,7 @@ html[data-ui="xlarge"] { --cpw: 540px; --cpfs: 18px; --tbh: 104px; }
 }
 .cp-chat::-webkit-scrollbar { width: 8px; }
 .cp-chat::-webkit-scrollbar-thumb { background: #333a46; border-radius: 4px; }
-.cp-empty { color: var(--muted); font-size: .86em; line-height: 1.9; }
+.cp-empty { color: var(--muted); font-size: 1em; line-height: 1.9; }
 .cp-empty b { color: var(--text); font-weight: 600; }
 .cp-msg {
   padding: 8px 10px; border-radius: 10px; line-height: 1.65;
@@ -390,7 +390,7 @@ html[data-ui="xlarge"] { --cpw: 540px; --cpfs: 18px; --tbh: 104px; }
   border-top: 1px solid var(--line); background: var(--panel2);
 }
 .cp-input textarea { font-size: 1em;
-  width: 100%; height: 170px; resize: vertical;
+  width: 100%; height: 190px; resize: vertical;
   background: var(--bg); color: var(--text);
   border: 1px solid var(--line); border-radius: 10px;
   padding: 8px 10px; font: inherit; font-size: .92em; line-height: 1.6;
