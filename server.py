@@ -24,6 +24,7 @@ import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import copilot
 import director
 import h3
 import h3_prompt
@@ -561,6 +562,25 @@ class Handler(BaseHTTPRequestHandler):
                     style=body.get("style", "电影感写实风格"),
                     llm_cfg=body.get("llm"),
                     fmt=body.get("format", "series"),
+                ))
+            if p == "/api/copilot/plan":
+                text = (body.get("text") or "").strip()
+                if not text:
+                    return self._json({"error": "先写点内容（一句话或一段剧本）"}, 400)
+                return self._json(copilot.plan(
+                    text,
+                    int(body.get("shots", 4)),
+                    body.get("style", "电影感写实风格"),
+                    float(body.get("seconds", 5)),
+                    llm=body.get("llm"),
+                ))
+            if p == "/api/copilot/refine":
+                if not (body.get("instruction") or "").strip():
+                    return self._json({"error": "instruction 不能为空"}, 400)
+                return self._json(copilot.refine(
+                    body.get("plan") or {},
+                    body["instruction"],
+                    llm=body.get("llm"),
                 ))
             if p == "/api/director/script":
                 if not (body.get("idea") or "").strip():
