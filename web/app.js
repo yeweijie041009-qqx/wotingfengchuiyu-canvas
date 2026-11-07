@@ -1,6 +1,7 @@
 ﻿/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
+let DIRTY = false, LAST_SAVE = 0;
               conn: null, drag: null, pan: null };
   const $ = (s) => document.querySelector(s);
   const canvasEl = $('#canvas'), nodesEl = $('#nodes'), edgesEl = $('#edges'),
@@ -272,6 +273,7 @@
       nodesEl.appendChild(el);
     }
     drawEdges();
+    markDirty();
   }
 
   function portPos(nodeEl, which) {
@@ -1038,16 +1040,38 @@
     }
   }
 
-  async function save() {
+  async function save(silent) {
     await fetch('/api/project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'current', nodes: S.nodes, edges: S.edges,
+                             ui: localStorage.getItem('studio.ui') || undefined,
                              view: { k: S.k, x: S.x, y: S.y } }),
     });
-    $('#btnSave').textContent = '已保存';
-    setTimeout(() => ($('#btnSave').textContent = '保存'), 1200);
+    DIRTY = false;
+    LAST_SAVE = Date.now();
+    if (!silent) {
+      $('#btnSave').textContent = '已保存';
+      setTimeout(() => ($('#btnSave').textContent = '保存'), 1200);
+    }
   }
+
+  // ---------- 自动保存 ----------
+  function markDirty() { DIRTY = true; }
+  setInterval(() => {
+    if (DIRTY && Date.now() - LAST_SAVE > 2000) save(true).catch(() => {});
+  }, 3000);
+  window.addEventListener('beforeunload', () => {
+    if (!DIRTY) return;
+    try {
+      const blob = new Blob([JSON.stringify({
+        name: 'current', nodes: S.nodes, edges: S.edges,
+        ui: localStorage.getItem('studio.ui') || undefined,
+        view: { k: S.k, x: S.x, y: S.y },
+      })], { type: 'application/json' });
+      navigator.sendBeacon('/api/project', blob);
+    } catch { /* 忽略 */ }
+  });
 
   async function load() {
     try {
@@ -1056,8 +1080,10 @@
       S.edges = j.edges || [];
       S.seq = S.nodes.reduce((m, n) => Math.max(m, Number(String(n.id).slice(1)) || 0), 0);
       if (j.view) { S.k = j.view.k; S.x = j.view.x; S.y = j.view.y; }
+      if (j.ui) { localStorage.setItem('studio.ui', j.ui); applyUi(j.ui); }
       applyView();
       render();
+      DIRTY = false;
     } catch { /* 首次运行没有存档 */ }
   }
 

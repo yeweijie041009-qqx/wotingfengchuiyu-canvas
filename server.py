@@ -571,8 +571,17 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/project":
                 name = body.get("name") or "current"
                 fp = os.path.join(PROJECTS, name + ".json")
-                with open(fp, "w", encoding="utf-8") as f:
+                # 每次保存前留一份上一版，防止误覆盖
+                if os.path.isfile(fp):
+                    try:
+                        import shutil
+                        shutil.copyfile(fp, os.path.join(PROJECTS, name + ".bak.json"))
+                    except Exception:
+                        pass
+                tmp = fp + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
                     json.dump({k: v for k, v in body.items() if k != "name"}, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, fp)      # 原子写，断电也不会留半个文件
                 return self._json({"ok": True, "path": fp})
             return self._json({"error": "unknown endpoint"}, 404)
         except Exception as e:  # noqa: BLE001
