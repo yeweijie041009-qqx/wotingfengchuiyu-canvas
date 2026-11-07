@@ -41,9 +41,10 @@ def _req(path: str, payload=None, timeout=30, retries=3):
     raise last  # type: ignore[misc]
 
 
-def alive() -> bool:
+def alive(timeout: float = 2.0, retries: int = 1) -> bool:
+    """快速探活：单次请求，不重试，避免把 /api/health 拖住。"""
     try:
-        _req("/system_stats", timeout=3)
+        _req("/system_stats", timeout=timeout, retries=retries)
         return True
     except Exception:
         return False

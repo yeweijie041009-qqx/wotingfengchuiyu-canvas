@@ -1,8 +1,8 @@
 ﻿/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
-let DIRTY = false, LAST_SAVE = 0;
               conn: null, drag: null, pan: null };
+  let DIRTY = false, LAST_SAVE = 0;
   const $ = (s) => document.querySelector(s);
   const canvasEl = $('#canvas'), nodesEl = $('#nodes'), edgesEl = $('#edges'),
         viewport = $('#viewport'), insp = $('#inspector'), inspBody = $('#inspBody'),
@@ -1029,14 +1029,20 @@ let DIRTY = false, LAST_SAVE = 0;
     } catch (e) { /* 忽略：没有档案就用默认 */ }
   }
   async function health() {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 6000);
     try {
-      const r = await fetch('/api/health');
+      const r = await fetch('/api/health', { signal: ctl.signal, cache: 'no-store' });
       const j = await r.json();
       $('#comfyDot').className = 'dot ' + (j.comfy ? 'ok' : 'err');
-      $('#comfyState').textContent = j.comfy ? 'ComfyUI 在线' : 'ComfyUI 未启动';
-    } catch {
+      $('#comfyState').textContent = j.comfy ? 'ComfyUI 在线' : 'ComfyUI 启动中…';
+    } catch (e) {
       $('#comfyDot').className = 'dot err';
-      $('#comfyState').textContent = '后端未连接';
+      $('#comfyState').textContent = (e && e.name === 'AbortError')
+        ? '检测超时，点刷新'
+        : '后端未连接';
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -1219,5 +1225,7 @@ let DIRTY = false, LAST_SAVE = 0;
   loadProfiles();
   S.subject = JSON.parse(localStorage.getItem('studio.subject') || 'null');
   renderSubjectChip();
-  setInterval(health, 8000);
+  window.__BOOTED = true;
+  setInterval(health, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) health(); });
 })();

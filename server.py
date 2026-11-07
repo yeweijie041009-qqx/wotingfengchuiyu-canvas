@@ -1,4 +1,4 @@
-"""AI 短剧画布 · 本地后端（仅标准库）
+﻿"""AI 短剧画布 · 本地后端（仅标准库）
 
 职责：
   1. 提供前端静态文件
@@ -45,6 +45,18 @@ JOB_Q: "queue.Queue[str]" = queue.Queue()
 LOCK = threading.Lock()
 GPU = threading.Lock()          # 一张卡，串行
 AGENTS: dict[str, dict] = {}
+_COMFY = {"ts": 0.0, "ok": False}
+
+
+def comfy_online() -> bool:
+    """缓存 5 秒的 ComfyUI 状态，避免每次都真的去探。"""
+    now = time.time()
+    if now - _COMFY["ts"] > 5:
+        _COMFY["ts"] = now
+        _COMFY["ok"] = h3.alive(timeout=2, retries=1)
+    return _COMFY["ok"]
+
+
 OUT_DIR = paths.OUTPUT
 IN_DIR = paths.INPUT
 VENV_PY = paths.COMFY_PY
@@ -397,7 +409,7 @@ class Handler(BaseHTTPRequestHandler):
         q = urllib.parse.parse_qs(u.query)
         try:
             if p == "/api/health":
-                return self._json({"ok": True, "comfy": h3.alive(), "queue": JOB_Q.qsize()})
+                return self._json({"ok": True, "comfy": comfy_online(), "queue": JOB_Q.qsize()})
             if p == "/api/profiles":
                 return self._json({"profiles": profiles.list_profiles()})
             if p == "/api/presets":

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+<div id="bootErr" style="display:none;position:fixed;left:0;right:0;top:0;z-index:9999;
+  background:#7f1d1d;color:#fff;padding:10px 16px;font:14px/1.6 system-ui,sans-serif;
+  white-space:pre-wrap"></div>
+
   <header class="topbar">
     <div class="brand">
       <span class="dot" id="comfyDot"></span>
@@ -123,6 +127,25 @@
     <div class="menu-item" data-type="image">图片节点（SDXL）</div>
   </div>
 
+<script>
+  // 前端出错时直接把错误显示出来，避免"检测中…"卡死却看不出原因
+  window.addEventListener('error', (e) => {
+    const box = document.getElementById('bootErr');
+    if (!box) return;
+    box.style.display = 'block';
+    box.textContent = '前端脚本出错：' + (e.message || e.error) +
+      '\n按 Ctrl + F5 强制刷新；仍不行请把这段文字发出来。';
+  });
+  setTimeout(() => {
+    if (window.__BOOTED) return;
+    const box = document.getElementById('bootErr');
+    if (box) {
+      box.style.display = 'block';
+      box.textContent = '前端没有启动成功。按 Ctrl + F5 强制刷新；' +
+        '如果一直这样，说明 app.js 有语法错误，请把这条消息发出来。';
+    }
+  }, 3000);
+</script>
 <script src="/app.js"></script>
 </body>
 </html>
