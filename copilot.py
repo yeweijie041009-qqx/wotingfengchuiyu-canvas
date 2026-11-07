@@ -29,7 +29,11 @@ def _clean(p: str) -> str:
     p = re.split(r"overall_soundscape:|non_diegetic_music:", p, flags=re.I)[0]
     p = _H3_MARK.sub(" ", p)
     p = re.sub(r"^(画面|镜头|场景|动作|整段)[：:]\s*", "", p)
-    p = re.sub(r"\s{2,}", " ", p).strip(" ,;.")
+    # 去掉模板里夹带的元信息段落（整段/标题/创意/风格）
+    segs = [x.strip() for x in p.split("。")
+            if x.strip() and not re.match(r"(整段|标题|创意|风格|格式)[：:]", x.strip())]
+    p = "。".join(segs)
+    p = re.sub(r"\s{2,}", " ", p).strip(" ,;.。")
     return p[:160]
 
 
