@@ -1,4 +1,4 @@
-﻿/* AI 短剧画布 · 前端（零依赖） */
+/* AI 短剧画布 · 前端（零依赖） */
 (() => {
   const S = { k: 1, x: 80, y: 60, nodes: [], edges: [], sel: null, seq: 0,
               conn: null, drag: null, pan: null };
@@ -1196,6 +1196,11 @@
   };
   $('#keyTest').onclick = async () => {
     const st = $('#keyStatus');
+    if (!document.getElementById('keyModel').value.trim()) {
+      st.className = 'status err';
+      st.textContent = '模型还没填：先点「拉取模型」选一个，或手填（Kimi 现在可用 kimi-k3.1-pro / kimi-latest）。';
+      return;
+    }
     st.textContent = '测试中…';
     st.className = 'status';
     try {

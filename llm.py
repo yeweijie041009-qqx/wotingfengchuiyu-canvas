@@ -16,6 +16,23 @@ import urllib.error
 import urllib.request
 
 
+def _log(line: str) -> None:
+    """把每次失败写进日志，方便事后排查（不记录 key）。"""
+    try:
+        import os
+        import time as _t
+        base = os.path.dirname(os.path.abspath(__file__))
+        d = os.path.join(base, "logs")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "llm.log"), "a", encoding="utf-8") as f:
+            f.write(f"[{_t.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+    except Exception:
+        pass
+
+
+def _mask(k: str) -> str:
+    return ("****" + k[-4:]) if k and len(k) > 8 else "(空)"
+
 HINTS = {
     400: "请求格式被拒绝（可能是模型名不存在，或该服务不支持当前参数）",
     401: "API Key 无效或已失效 —— 去服务商后台重新生成一个（注意别把旧 key 贴回来）",
@@ -47,6 +64,7 @@ def _post(url: str, key: str, payload: dict, timeout: int = 180) -> dict:
                 detail = raw
         except Exception:
             pass
+        _log(f"POST {url} key={_mask(key)} -> HTTP {e.code} {detail[:160]}")
         hint = HINTS.get(e.code, "")
         parts = [f"HTTP {e.code}"]
         if hint:
