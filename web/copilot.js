@@ -1,4 +1,4 @@
-/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
+﻿/* 画布副驾驶：右侧对话面板 → 剧本 → 镜头图 + 视频节点 → 自动出图出片 */
 (() => {
   const api = window.STUDIO;
   if (!api) return;
@@ -334,7 +334,7 @@
     box.innerHTML = `
       <button class="btn primary" data-a="go">继续出视频</button>
       <button class="btn" data-a="redo">重出图</button>
-      <button class="btn" data-a="lock">用第 1 镜当角色参考</button>`;
+      <button class="btn" data-a="char">重出角色设定</button>`;
     box.querySelector('[data-a="go"]').onclick = async (e) => {
       e.target.disabled = true;
       try {
@@ -358,12 +358,18 @@
         e.target.disabled = false;
       }
     };
-    box.querySelector('[data-a="lock"]').onclick = () => {
-      const first = nodes.images[0];
-      if (!first || !first.data.file) { addMsg('还没有图可以当参考', 'err'); return; }
-      api.setSubject && api.setSubject(first.data.file.filename);
-      addMsg(`已把「${first.data.file.filename}」设为角色参考图；` +
-        '之后重新出图会锁住这个人物。', 'ok');
+    box.querySelector('[data-a="char"]').onclick = async (e) => {
+      if (!nodes.char) { addMsg('没有角色节点', 'err'); return; }
+      e.target.disabled = true;
+      try {
+        nodes.char.data.file = null;
+        await renderChar();
+        addMsg('角色设定重出好了。接着点「重出图」，所有镜头会跟着新角色重新出。', 'ok');
+      } catch (err) {
+        addMsg('重出角色失败：' + (err.message || err), 'err');
+      } finally {
+        e.target.disabled = false;
+      }
     };
     chat.appendChild(box);
     chat.scrollTop = chat.scrollHeight;
