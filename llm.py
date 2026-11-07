@@ -122,22 +122,31 @@ def complete(cfg: dict, messages: list[dict], *, json_mode: bool = True,
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
 
-    def _try(u: str):
-        return _post(u, key, payload, timeout)
-
-    try:
-        data = _try(url)
-    except RuntimeError as e:
-        msg = str(e)
-        # 1) OpenAI 兼容服务大多要求 /v1 前缀（Kimi / 硅基流动 / OpenRouter / Ollama…）
-        if "404" in msg and "/v1" not in base:
-            url = base + "/v1/chat/completions"
-            data = _try(url)
-        # 2) 有些服务不认 response_format，去掉再试
-        elif "400" in msg or "422" in msg:
-            payload.pop("response_format", None)
-            data = _try(url)
-        else:
+    attempts = 0
+    while True:
+        try:
+            data = _post(url, key, payload, timeout)
+            break
+        except RuntimeError as e:
+            msg = str(e)
+            attempts += 1
+            if attempts > 3:
+                raise
+            # 1) OpenAI 兼容服务大多要求 /v1 前缀（Kimi / 硅基流动 / OpenRouter / Ollama…）
+            if "404" in msg and "/v1" not in base:
+                url = base + "/v1/chat/completions"
+                continue
+            # 2) Kimi K 系列只接受 temperature=1
+            if "temperature" in msg and payload.get("temperature") != 1:
+                payload["temperature"] = 1
+                continue
+            # 3) 有些服务不认 response_format
+            if "response_format" in msg and "response_format" in payload:
+                payload.pop("response_format", None)
+                continue
+            if ("400" in msg or "422" in msg) and "response_format" in payload:
+                payload.pop("response_format", None)
+                continue
             raise
 
     content = data["choices"][0]["message"]["content"]
