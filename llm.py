@@ -16,13 +16,44 @@ import urllib.error
 import urllib.request
 
 
+HINTS = {
+    400: "请求格式被拒绝（可能是模型名不存在，或该服务不支持当前参数）",
+    401: "API Key 无效或已失效 —— 去服务商后台重新生成一个（注意别把旧 key 贴回来）",
+    402: "账户余额不足 —— 去后台充值",
+    403: "没有权限 —— key 可能没开通该模型，或被盗用后被限制",
+    404: "接口地址不对 —— 检查 Base URL（DeepSeek 用 https://api.deepseek.com，OpenAI 要带 /v1）",
+    429: "请求太频繁 / 限流 —— 等一会儿再试",
+    500: "服务端错误 —— 稍后重试",
+    503: "模型服务繁忙 —— 稍后重试",
+}
+
+
 def _post(url: str, key: str, payload: dict, timeout: int = 180) -> dict:
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url, data=body,
         headers={"Content-Type": "application/json", "Authorization": "Bearer " + key})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            raw = e.read().decode("utf-8", "ignore")
+            try:
+                j = json.loads(raw)
+                detail = (j.get("error") or {}).get("message") or raw
+            except Exception:
+                detail = raw
+        except Exception:
+            pass
+        hint = HINTS.get(e.code, "")
+        parts = [f"HTTP {e.code}"]
+        if hint:
+            parts.append(hint)
+        if detail:
+            parts.append(detail.strip()[:200])
+        raise RuntimeError("；".join(parts)) from None
 
 
 def _extract_json(text: str) -> dict:
